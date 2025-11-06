@@ -1,15 +1,49 @@
-import React from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ImageBackground,
   TouchableOpacity,
+  Animated,
   Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 export default function HomeScreen() {
+  const [flipped, setFlipped] = useState(false);
+  const flipAnim = useRef(new Animated.Value(0)).current;
+
+  const frontInterpolate = flipAnim.interpolate({
+    inputRange: [0, 180],
+    outputRange: ["0deg", "180deg"],
+  });
+
+  const backInterpolate = flipAnim.interpolate({
+    inputRange: [0, 180],
+    outputRange: ["180deg", "360deg"],
+  });
+
+  const handleFlip = () => {
+    if (flipped) {
+      Animated.spring(flipAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        friction: 8,
+        tension: 10,
+      }).start();
+      setFlipped(false);
+    } else {
+      Animated.spring(flipAnim, {
+        toValue: 180,
+        useNativeDriver: true,
+        friction: 8,
+        tension: 10,
+      }).start();
+      setFlipped(true);
+    }
+  };
+
   const handleClaimPoints = () => {
     Alert.alert("Points Claimed!", "You’ve successfully claimed your iHub points 🎉");
   };
@@ -21,23 +55,49 @@ export default function HomeScreen() {
       end={{ x: 1, y: 1 }}
       style={styles.screen}
     >
-      <Text style={styles.welcomeText}>Welcome, Sara!</Text>
+      <Text style={styles.welcomeText}>Welcome, Sarah!</Text>
 
-      <View style={styles.container}>
-        <ImageBackground
-          source={require("@/assets/images/card_front.png")}
-          style={styles.cardBackground}
-          imageStyle={{ borderRadius: 16 }}
-          resizeMode="cover"
-        >
-        </ImageBackground>
-      </View>
+      {/* Card Section */}
+      <TouchableOpacity onPress={handleFlip} activeOpacity={0.9}>
+        <View style={styles.container}>
+          {/* FRONT SIDE */}
+          <Animated.View
+            style={[
+              styles.card,
+              { transform: [{ rotateY: frontInterpolate }] },
+            ]}
+          >
+            <ImageBackground
+              source={require("@/assets/images/card_front.png")}
+              style={styles.cardBackground}
+              imageStyle={{ borderRadius: 16 }}
+            />
+          </Animated.View>
 
+          {/* BACK SIDE */}
+          <Animated.View
+            style={[
+              styles.card,
+              styles.cardBack,
+              { transform: [{ rotateY: backInterpolate }] },
+            ]}
+          >
+            <ImageBackground
+              source={require("@/assets/images/card_back.png")}
+              style={styles.cardBackground}
+              imageStyle={{ borderRadius: 16 }}
+            />
+          </Animated.View>
+        </View>
+      </TouchableOpacity>
+
+      {/* Info Section */}
       <View style={styles.infoContainer}>
         <Text style={styles.pointsText}>Total iHub Points</Text>
         <Text style={styles.pointsValue}>200</Text>
       </View>
 
+      {/* Button */}
       <TouchableOpacity style={styles.button} onPress={handleClaimPoints}>
         <Text style={styles.buttonText}>Claim Points</Text>
       </TouchableOpacity>
@@ -55,45 +115,33 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 26,
     fontWeight: "500",
-    color: "#313131ff",
+    color: "#313131",
     marginBottom: 30,
-    textShadowColor: "rgba(0,0,0,0.2)",
-    textShadowOffset: { width: 1, height: 2 },
-    textShadowRadius: 3,
   },
   container: {
-    justifyContent: "center",
+    width: 380,
+    height: 220,
     alignItems: "center",
+    justifyContent: "center",
     marginBottom: 24,
   },
-  cardBackground: {
-    height: 220,
-    width: 380,
-    justifyContent: "center",
-    alignItems: "center",
+  card: {
+    width: "100%",
+    height: "100%",
+    position: "absolute",
+    backfaceVisibility: "hidden",
     elevation: 6,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
   },
-  cardOverlay: {
-    backgroundColor: "rgba(0,0,0,0.25)",
+  cardBack: {
+    transform: [{ rotateY: "180deg" }],
+  },
+  cardBackground: {
+    flex: 1,
     borderRadius: 16,
-    padding: 20,
-    alignItems: "center",
-    width: "100%",
-  },
-  cardTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    fontStyle: "italic",
-    color: "#fff",
-    marginBottom: 6,
-  },
-  cardSubtitle: {
-    fontSize: 16,
-    color: "#f2f2f2",
   },
   infoContainer: {
     alignItems: "center",
@@ -101,13 +149,13 @@ const styles = StyleSheet.create({
   },
   pointsText: {
     fontSize: 18,
-    color: "#313131ff",
+    color: "#313131",
     opacity: 0.9,
   },
   pointsValue: {
     fontSize: 36,
     fontWeight: "bold",
-    color: "#313131ff",
+    color: "#313131",
     textShadowColor: "rgba(0,0,0,0.3)",
     textShadowOffset: { width: 1, height: 2 },
     textShadowRadius: 4,
