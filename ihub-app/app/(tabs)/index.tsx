@@ -45,7 +45,10 @@ export default function HomeScreen() {
   };
 
   const handleClaimPoints = () => {
-    Alert.alert("Points Claimed!", "You’ve successfully claimed your iHub points 🎉");
+    Alert.alert(
+      "Points Claimed!",
+      "You’ve successfully claimed your iHub points 🎉"
+    );
   };
 
   return (
@@ -86,7 +89,43 @@ export default function HomeScreen() {
               source={require("@/assets/images/card_back.png")}
               style={styles.cardBackground}
               imageStyle={{ borderRadius: 16 }}
-            />
+            >
+              <View style={styles.cardContent}>
+                {/* Name + ID */}
+                <View style={styles.row}>
+                  <View>
+                    <Text style={styles.cardTitle}>SARAH MAY BANGAHON</Text>
+                    <Text style={styles.cardSubtitle}>784256</Text>
+                  </View>
+                </View>
+
+                {/* Member Since + Valid Thru */}
+                <View style={[styles.row, { marginTop: 10 }]}>
+                  <View style={styles.infoBlock}>
+                    <Text style={styles.cardSmallLabel}>MEMBER SINCE</Text>
+                    <Text style={styles.cardSubtitle}>11/25</Text>
+                  </View>
+                  <View style={styles.infoBlock}>
+                    <Text style={styles.cardSmallLabel}>VALID THRU</Text>
+                    <Text style={styles.cardSubtitle}>11/26</Text>
+                  </View>
+                </View>
+
+                {/* Terms and Info */}
+                <View style={[styles.termsContainer, { marginTop: 16 }]}>
+                  <Text style={styles.cardSmallText}>
+                    By using this virtual card, you agree to the iHub Access
+                    Pass terms of use and privacy policy.
+                  </Text>
+                  <Text style={styles.cardSmallText}>
+                    You may call iHub +639855713768 for more details.
+                  </Text>
+                  <Text style={styles.cardSmallText}>
+                    This card is non-transferable.
+                  </Text>
+                </View>
+              </View>
+            </ImageBackground>
           </Animated.View>
         </View>
       </TouchableOpacity>
@@ -175,5 +214,56 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     textTransform: "uppercase",
+  },
+  cardContent: {
+  flex: 1,
+  justifyContent: "flex-end",
+  alignItems: "flex-start",
+  padding: 20,
+  borderRadius: 16,
+  width: "100%",
+},
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+  },
+
+  infoBlock: {
+    flex: 1,
+    marginRight: 20,
+  },
+
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: 4,
+  },
+
+  cardSubtitle: {
+    fontSize: 14,
+    color: "#f5f5f5",
+  },
+
+  cardSmallLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#ddd",
+    marginBottom: 2,
+  },
+
+  cardSmallText: {
+    fontSize: 6,
+    color: "#eaeaea",
+    marginBottom: 4,
+    lineHeight: 8,
+    width: "95%",
+  },
+
+  termsContainer: {
+    marginTop: 10,
+    width: "100%",
   },
 });
