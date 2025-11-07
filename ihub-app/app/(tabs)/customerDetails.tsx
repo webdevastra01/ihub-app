@@ -1,25 +1,25 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import QRCode from "react-native-qrcode-svg"; // 👈 make sure you install this: npm install react-native-qrcode-svg
+import QRCode from "react-native-qrcode-svg";
 
 export default function QrScreen() {
-  const userId = "784256"; // You can replace this dynamically later
+  const userId = "784256";
 
   return (
     <LinearGradient
-      colors={["#f5b70e", "#f5630e"]} // Yellow → Orange gradient
+      colors={["#f5b70e", "#f5630e"]} 
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.screen}
     >
       <View style={styles.card}>
-        <Text style={styles.title}>iHub Access</Text>
+        <Text style={styles.title}>iAccess</Text>
 
         {/* QR Code */}
         <View style={styles.qrContainer}>
           <QRCode
-            value={userId} // The data encoded in QR
+            value={userId}
             size={180}
             color="#333"
             backgroundColor="white"

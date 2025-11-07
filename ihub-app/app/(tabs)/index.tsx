@@ -132,7 +132,7 @@ export default function HomeScreen() {
 
       {/* Info Section */}
       <View style={styles.infoContainer}>
-        <Text style={styles.pointsText}>Total iHub Points</Text>
+        <Text style={styles.pointsText}>Total iAccess Points</Text>
         <Text style={styles.pointsValue}>200</Text>
       </View>
 

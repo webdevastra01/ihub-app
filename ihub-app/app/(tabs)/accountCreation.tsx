@@ -22,6 +22,7 @@ export default function SignUpScreen() {
     contact: "",
     email: "",
     password: "",
+    referral: "",
   });
 
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -41,7 +42,11 @@ export default function SignUpScreen() {
       setSelectedDate(date);
       handleChange(
         "birthday",
-        date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" })
+        date.toLocaleDateString("en-US", {
+          month: "2-digit",
+          day: "2-digit",
+          year: "numeric",
+        })
       );
     }
   };
@@ -139,7 +144,15 @@ export default function SignUpScreen() {
               onChangeText={(t) => handleChange("password", t)}
               secureTextEntry
             />
-
+            <TextInput
+              placeholder="Referral Code (optional)"
+              placeholderTextColor="#777"
+              style={styles.input}
+              value={form.referral}
+              onChangeText={(t) => handleChange("referral", t)}
+              autoCapitalize="characters"
+              maxLength={10}
+            />
             <TouchableOpacity style={styles.button} onPress={handleSignUp}>
               <Text style={styles.buttonText}>Sign Up</Text>
             </TouchableOpacity>
