@@ -1,4 +1,5 @@
 import { Stack } from "expo-router";
+import 'react-native-url-polyfill/auto';
 import React from "react";
 
 export default function Layout() {

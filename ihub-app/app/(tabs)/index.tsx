@@ -12,8 +12,20 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { supabase } from "@/utils/supabase";
+import { useEffect } from "react";
 
 const { width } = Dimensions.get("window");
+
+export async function testSupabase() {
+  const { data, error } = await supabase.from("users").select("*").limit(1);
+
+  if (error) {
+    console.error("Supabase connection failed:", error.message);
+  } else {
+    console.log("Supabase connected! Example data:", data);
+  }
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -64,6 +76,10 @@ export default function HomeScreen() {
       },
     ]);
   };
+
+  useEffect(() => {
+    testSupabase();
+  }, []);
 
   return (
     <LinearGradient
@@ -128,7 +144,10 @@ export default function HomeScreen() {
         <View style={styles.container}>
           {/* FRONT SIDE */}
           <Animated.View
-            style={[styles.card, { transform: [{ rotateY: frontInterpolate }] }]}
+            style={[
+              styles.card,
+              { transform: [{ rotateY: frontInterpolate }] },
+            ]}
           >
             <ImageBackground
               source={require("@/assets/images/card_front.png")}

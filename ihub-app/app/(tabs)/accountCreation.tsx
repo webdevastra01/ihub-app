@@ -14,6 +14,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
+import { signUpUser } from "@/utils/supabaseQueries";
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -35,22 +36,49 @@ export default function SignUpScreen() {
     setForm({ ...form, [key]: value });
   };
 
-  const handleSignUp = () => {
-    console.log("Form data:", form);
+  const handleSignUp = async () => {
+    // Basic input validation
+    if (
+      !form.firstname ||
+      !form.surname ||
+      !form.birthday ||
+      !form.contact ||
+      !form.email ||
+      !form.password
+    ) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+    console.log("Signing up with:", form);
+
+    try {
+      // Call Supabase signup query
+      const { success, error, userId } = await signUpUser({
+        firstname: form.firstname,
+        surname: form.surname,
+        birthday: form.birthday,
+        contactNumber: form.contact,
+        email: form.email,
+        secret: form.password,
+        referralCode: form.referral,
+      });
+
+      if (success) {
+        router.replace("/(tabs)/authenticate");
+      } else {
+        alert(`Signup failed: ${error}`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert("Something went wrong. Please try again later.");
+    }
   };
 
   const handleDateChange = (_: any, date?: Date) => {
     setShowDatePicker(false);
     if (date) {
       setSelectedDate(date);
-      handleChange(
-        "birthday",
-        date.toLocaleDateString("en-US", {
-          month: "2-digit",
-          day: "2-digit",
-          year: "numeric",
-        })
-      );
+      handleChange("birthday", date.toISOString());
     }
   };
 
@@ -105,7 +133,15 @@ export default function SignUpScreen() {
                   placeholder="Birthday"
                   placeholderTextColor="#777"
                   style={styles.input}
-                  value={form.birthday}
+                  value={
+                    selectedDate
+                      ? selectedDate.toLocaleDateString("en-US", {
+                          month: "2-digit",
+                          day: "2-digit",
+                          year: "numeric",
+                        })
+                      : ""
+                  }
                   editable={false}
                 />
               </View>
@@ -117,7 +153,13 @@ export default function SignUpScreen() {
                 mode="date"
                 display="spinner"
                 maximumDate={new Date()}
-                onChange={handleDateChange}
+                onChange={(event, date) => {
+                  setShowDatePicker(false);
+                  if (date) {
+                    setSelectedDate(date);
+                    handleChange("birthday", date.toISOString()); // store ISO string for DB
+                  }
+                }}
               />
             )}
 
