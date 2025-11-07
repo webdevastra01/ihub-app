@@ -6,17 +6,24 @@ import {
   ImageBackground,
   TouchableOpacity,
   Animated,
+  Dimensions,
   Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+
+const { width } = Dimensions.get("window");
 
 export default function HomeScreen() {
   const router = useRouter();
-
   const [flipped, setFlipped] = useState(false);
-  const flipAnim = useRef(new Animated.Value(0)).current;
+  const [menuOpen, setMenuOpen] = useState(false);
 
+  const flipAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(-width * 0.6)).current; // sidebar starts hidden
+
+  // === CARD FLIP ===
   const frontInterpolate = flipAnim.interpolate({
     inputRange: [0, 180],
     outputRange: ["0deg", "180deg"],
@@ -28,30 +35,34 @@ export default function HomeScreen() {
   });
 
   const handleFlip = () => {
-    if (flipped) {
-      Animated.spring(flipAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        friction: 8,
-        tension: 10,
-      }).start();
-      setFlipped(false);
-    } else {
-      Animated.spring(flipAnim, {
-        toValue: 180,
-        useNativeDriver: true,
-        friction: 8,
-        tension: 10,
-      }).start();
-      setFlipped(true);
-    }
+    Animated.spring(flipAnim, {
+      toValue: flipped ? 0 : 180,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 10,
+    }).start();
+    setFlipped(!flipped);
   };
 
-  const handleClaimPoints = () => {
-    Alert.alert(
-      "Points Claimed!",
-      "You’ve successfully claimed your iHub points 🎉"
-    );
+  // === SIDEBAR SLIDE ===
+  const toggleMenu = () => {
+    Animated.timing(slideAnim, {
+      toValue: menuOpen ? -width * 0.6 : 0,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+    setMenuOpen(!menuOpen);
+  };
+
+  const handleLogout = () => {
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: () => router.replace("/authenticate"),
+      },
+    ]);
   };
 
   return (
@@ -61,17 +72,63 @@ export default function HomeScreen() {
       end={{ x: 1, y: 1 }}
       style={styles.screen}
     >
+      {/* === HAMBURGER BUTTON === */}
+      {!menuOpen && (
+        <TouchableOpacity style={styles.menuButton} onPress={toggleMenu}>
+          <Ionicons name="menu" size={28} color="#333" />
+        </TouchableOpacity>
+      )}
+
+      {/* === OVERLAY === */}
+      {menuOpen && (
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={toggleMenu}
+        />
+      )}
+
+      {/* === SIDEBAR === */}
+      <Animated.View style={[styles.sidebar, { left: slideAnim }]}>
+        <View style={styles.sidebarContent}>
+          <Text style={styles.sidebarTitle}>Menu</Text>
+
+          {/* Home */}
+          <TouchableOpacity style={[styles.menuItem, styles.activeItem]}>
+            <Ionicons name="home" size={22} color="#fff" />
+            <Text style={styles.activeText}>Home</Text>
+          </TouchableOpacity>
+
+          {/* QR Page */}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              toggleMenu();
+              router.push("/(tabs)/customerDetails");
+            }}
+          >
+            <Ionicons name="qr-code" size={22} color="#333" />
+            <Text style={styles.menuText}>My QR</Text>
+          </TouchableOpacity>
+
+          <View style={{ flex: 1 }} />
+
+          {/* Logout */}
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={22} color="#f5630e" />
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+
+      {/* === MAIN CONTENT === */}
       <Text style={styles.welcomeText}>Welcome, Sarah!</Text>
 
-      {/* Card Section */}
       <TouchableOpacity onPress={handleFlip} activeOpacity={0.9}>
         <View style={styles.container}>
           {/* FRONT SIDE */}
           <Animated.View
-            style={[
-              styles.card,
-              { transform: [{ rotateY: frontInterpolate }] },
-            ]}
+            style={[styles.card, { transform: [{ rotateY: frontInterpolate }] }]}
           >
             <ImageBackground
               source={require("@/assets/images/card_front.png")}
@@ -133,14 +190,17 @@ export default function HomeScreen() {
         </View>
       </TouchableOpacity>
 
-      {/* Info Section */}
+      {/* Points Info */}
       <View style={styles.infoContainer}>
         <Text style={styles.pointsText}>Total iAccess Points</Text>
         <Text style={styles.pointsValue}>200</Text>
       </View>
 
-      {/* Button */}
-      <TouchableOpacity style={styles.button} onPress={() => router.push("/(tabs)/customerDetails")}>
+      {/* Claim Points */}
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => router.push("/(tabs)/customerDetails")}
+      >
         <Text style={styles.buttonText}>Claim Points</Text>
       </TouchableOpacity>
     </LinearGradient>
@@ -153,6 +213,73 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
+  },
+  menuButton: {
+    position: "absolute",
+    top: 60,
+    left: 20,
+    zIndex: 10,
+    padding: 8,
+  },
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    zIndex: 5,
+  },
+  sidebar: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: width * 0.6,
+    backgroundColor: "#fff",
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+    zIndex: 6,
+    elevation: 10,
+  },
+  sidebarContent: {
+    flex: 1,
+    marginTop: 40,
+  },
+  sidebarTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 30,
+    color: "#f5630e",
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+  },
+  menuText: {
+    fontSize: 18,
+    color: "#333",
+  },
+  activeItem: {
+    backgroundColor: "#f5630e",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+  },
+  activeText: {
+    fontSize: 18,
+    color: "#fff",
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 30,
+  },
+  logoutText: {
+    fontSize: 16,
+    color: "#f5630e",
+    fontWeight: "600",
   },
   welcomeText: {
     fontSize: 26,
@@ -173,10 +300,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     backfaceVisibility: "hidden",
     elevation: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
   },
   cardBack: {
     transform: [{ rotateY: "180deg" }],
@@ -184,6 +307,12 @@ const styles = StyleSheet.create({
   cardBackground: {
     flex: 1,
     borderRadius: 16,
+  },
+  cardContent: {
+    flex: 1,
+    justifyContent: "flex-end",
+    alignItems: "flex-start",
+    padding: 20,
   },
   infoContainer: {
     alignItems: "center",
@@ -198,19 +327,12 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: "bold",
     color: "#313131",
-    textShadowColor: "rgba(0,0,0,0.3)",
-    textShadowOffset: { width: 1, height: 2 },
-    textShadowRadius: 4,
   },
   button: {
     backgroundColor: "#f5630e",
     paddingVertical: 14,
     paddingHorizontal: 40,
     borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
   },
   buttonText: {
     color: "#fff",
@@ -218,14 +340,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
   },
-  cardContent: {
-  flex: 1,
-  justifyContent: "flex-end",
-  alignItems: "flex-start",
-  padding: 20,
-  borderRadius: 16,
-  width: "100%",
-},
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
