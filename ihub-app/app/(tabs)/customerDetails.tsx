@@ -2,28 +2,31 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import QRCode from "react-native-qrcode-svg";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function QrScreen() {
+  const router = useRouter();
   const userId = "784256";
 
   return (
     <LinearGradient
-      colors={["#f5b70e", "#f5630e"]} 
+      colors={["#f5b70e", "#f5630e"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.screen}
     >
       <View style={styles.card}>
+        {/* ❌ X Button */}
+        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+          <Ionicons name="close" size={26} color="#333" />
+        </TouchableOpacity>
+
         <Text style={styles.title}>iAccess</Text>
 
         {/* QR Code */}
         <View style={styles.qrContainer}>
-          <QRCode
-            value={userId}
-            size={180}
-            color="#333"
-            backgroundColor="white"
-          />
+          <QRCode value={userId} size={180} color="#333" backgroundColor="white" />
         </View>
 
         {/* ID Number */}
@@ -50,11 +53,21 @@ const styles = StyleSheet.create({
     padding: 24,
     width: 320,
     alignItems: "center",
+    position: "relative", // ✅ Needed for absolute positioning of the close button
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 6,
+  },
+  closeButton: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    backgroundColor: "#eee",
+    borderRadius: 20,
+    padding: 4,
+    zIndex: 10,
   },
   title: {
     fontSize: 22,

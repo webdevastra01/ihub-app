@@ -9,8 +9,11 @@ import {
   Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 
 export default function HomeScreen() {
+  const router = useRouter();
+
   const [flipped, setFlipped] = useState(false);
   const flipAnim = useRef(new Animated.Value(0)).current;
 
@@ -137,7 +140,7 @@ export default function HomeScreen() {
       </View>
 
       {/* Button */}
-      <TouchableOpacity style={styles.button} onPress={handleClaimPoints}>
+      <TouchableOpacity style={styles.button} onPress={() => router.push("/(tabs)/customerDetails")}>
         <Text style={styles.buttonText}>Claim Points</Text>
       </TouchableOpacity>
     </LinearGradient>

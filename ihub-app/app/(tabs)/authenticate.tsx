@@ -9,8 +9,11 @@ import {
 } from "react-native";
 import Checkbox from "expo-checkbox";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 
 export default function LoginScreen() {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
@@ -19,6 +22,7 @@ export default function LoginScreen() {
     console.log("Email:", email);
     console.log("Password:", password);
     console.log("Remember me:", remember);
+    router.replace("/(tabs)");
   };
 
   return (
@@ -71,7 +75,7 @@ export default function LoginScreen() {
 
         <View style={styles.signupContainer}>
           <Text style={styles.signupText}>Don’t have an account? </Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/(tabs)/accountCreation")}>
             <Text style={styles.signupLink}>Sign up</Text>
           </TouchableOpacity>
         </View>

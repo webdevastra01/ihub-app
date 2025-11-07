@@ -1,10 +1,13 @@
-import { Stack } from 'expo-router';
-import React from 'react';
+import { Stack } from "expo-router";
+import React from "react";
 
 export default function Layout() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
+      <Stack.Screen name="authenticate" />
       <Stack.Screen name="accountCreation" />
+      <Stack.Screen name="index" />
+      <Stack.Screen name="customerDetails" />
     </Stack>
   );
 }

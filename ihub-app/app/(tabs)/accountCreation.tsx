@@ -13,8 +13,11 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { useRouter } from "expo-router";
 
 export default function SignUpScreen() {
+  const router = useRouter();
+
   const [form, setForm] = useState({
     firstname: "",
     surname: "",
@@ -159,7 +162,7 @@ export default function SignUpScreen() {
 
             <View style={styles.signupContainer}>
               <Text style={styles.signupText}>Already have an account? </Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => router.back()}>
                 <Text style={styles.signupLink}>Login</Text>
               </TouchableOpacity>
             </View>
