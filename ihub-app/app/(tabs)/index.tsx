@@ -99,16 +99,16 @@ export default function HomeScreen() {
             <Text style={styles.activeText}>Home</Text>
           </TouchableOpacity>
 
-          {/* QR Page */}
+          {/* Transactions */}
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => {
               toggleMenu();
-              router.push("/(tabs)/customerDetails");
+              router.push("/(tabs)/transactionLogs");
             }}
           >
-            <Ionicons name="qr-code" size={22} color="#333" />
-            <Text style={styles.menuText}>My QR</Text>
+            <Ionicons name="receipt-outline" size={22} color="#333" />
+            <Text style={styles.menuText}>Transactions</Text>
           </TouchableOpacity>
 
           <View style={{ flex: 1 }} />
