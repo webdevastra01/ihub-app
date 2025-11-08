@@ -9,16 +9,16 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { fetchTransactions } from "@/utils/supabaseQueries";
-import { useLocalSearchParams } from "expo-router";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
-// === TYPES ===
 type TransactionType = "earn" | "redeem";
 
 type Transaction = {
@@ -33,16 +33,18 @@ export default function TransactionHistoryScreen() {
   const router = useRouter();
   const { userId } = useLocalSearchParams();
   const id = Array.isArray(userId) ? userId[0] : userId ?? "";
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const slideAnim = useRef(new Animated.Value(-width * 0.6)).current;
+  const [refreshing, setRefreshing] = useState(false);
+  const slideAnim = useRef(new Animated.Value(-width * 0.7)).current;
 
-  // === SIDEBAR ANIMATION ===
+  // === SIDEBAR TOGGLE ===
   const toggleMenu = () => {
     Animated.timing(slideAnim, {
-      toValue: menuOpen ? -width * 0.6 : 0,
-      duration: 250,
+      toValue: menuOpen ? -width * 0.7 : 0,
+      duration: 300,
       useNativeDriver: false,
     }).start();
     setMenuOpen(!menuOpen);
@@ -59,30 +61,35 @@ export default function TransactionHistoryScreen() {
     ]);
   };
 
-  // === FETCH TRANSACTIONS ===
+  const loadTransactions = async (showLoader = true) => {
+    try {
+      if (showLoader) setLoading(true);
+      if (!id) throw new Error("User not logged in");
+
+      const result = await fetchTransactions(id);
+      if (!result.success) throw new Error(result.error);
+      setTransactions(result.data ?? []);
+    } catch (err: any) {
+      console.error(err);
+      Alert.alert("Error", err.message || "Failed to load transactions.");
+    } finally {
+      if (showLoader) setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadTransactions = async () => {
-      try {
-        setLoading(true);
-
-        if (!id) throw new Error("User not logged in");
-
-        const result = await fetchTransactions(id);
-
-        if (!result.success) throw new Error(result.error);
-        setTransactions(result.data ?? []);
-      } catch (err: any) {
-        console.error(err);
-        Alert.alert("Error", err.message || "Failed to load transactions.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadTransactions();
   }, []);
 
-  // === RENDER TRANSACTION ITEM ===
+  const onRefresh = async () => {
+    try {
+      setRefreshing(true);
+      await loadTransactions(false);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const renderItem = ({ item }: { item: Transaction }) => (
     <View style={styles.transactionCard}>
       <View style={styles.cardLeft}>
@@ -113,115 +120,122 @@ export default function TransactionHistoryScreen() {
 
   // === LOADING STATE ===
   if (loading) {
-      return (
-        <LinearGradient
-          colors={["#f5efe0ff", "#d8cbc4ff"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[
-            styles.screen,
-            { justifyContent: "center", alignItems: "center" },
-          ]}
-        >
-          <ActivityIndicator size="large" color="#f5630e" />
-          <Text style={{ color: "#333", fontSize: 18, marginTop: 10 }}>
-            Loading...
-          </Text>
-        </LinearGradient>
-      );
-    }
-
-  return (
-    <LinearGradient
-      colors={["#f5efe0ff", "#d8cbc4ff"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.screen}
-    >
-      {/* === HAMBURGER BUTTON === */}
-      {!menuOpen && (
-        <TouchableOpacity style={styles.menuButton} onPress={toggleMenu}>
-          <Ionicons name="menu" size={28} color="#333" />
-        </TouchableOpacity>
-      )}
-
-      {/* === OVERLAY + SIDEBAR === */}
-      {menuOpen && (
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={toggleMenu}
-        >
-          <Animated.View style={[styles.sidebar, { left: slideAnim }]}>
-            <View style={styles.sidebarContent}>
-              <Text style={styles.sidebarTitle}>Menu</Text>
-
-              {/* Home */}
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => {
-                  toggleMenu();
-                  router.push({
-                    pathname: "/(tabs)",
-                    params: { userId: userId },
-                  });
-                }}
-              >
-                <Ionicons name="home" size={22} color="#333" />
-                <Text style={styles.menuText}>Home</Text>
-              </TouchableOpacity>
-
-              {/* Active Page */}
-              <TouchableOpacity style={[styles.menuItem, styles.activeItem]}>
-                <Ionicons name="receipt-outline" size={22} color="#fff" />
-                <Text style={styles.activeText}>Transactions</Text>
-              </TouchableOpacity>
-
-              <View style={{ flex: 1 }} />
-
-              {/* Logout */}
-              <TouchableOpacity
-                style={styles.logoutButton}
-                onPress={handleLogout}
-              >
-                <Ionicons name="log-out-outline" size={22} color="#f5630e" />
-                <Text style={styles.logoutText}>Logout</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        </TouchableOpacity>
-      )}
-
-      {/* === MAIN CONTENT === */}
-      <Text style={styles.header}>Transaction History</Text>
-
-      {transactions.length === 0 ? (
-        <Text style={{ textAlign: "center", color: "#555", marginTop: 40 }}>
-          No transactions found.
+    return (
+      <LinearGradient
+        colors={["#f5efe0ff", "#d8cbc4ff"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.fullScreenCenter}
+      >
+        <ActivityIndicator size="large" color="#f5630e" />
+        <Text style={{ color: "#333", fontSize: 18, marginTop: 10 }}>
+          Loading...
         </Text>
-      ) : (
-        <FlatList
-          data={transactions}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
-    </LinearGradient>
+      </LinearGradient>
+    );
+  }
+
+  // === MAIN CONTENT ===
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient
+        colors={["#f5efe0ff", "#d8cbc4ff"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientBackground}
+      >
+        {/* === HAMBURGER === */}
+        {!menuOpen && (
+          <TouchableOpacity style={styles.menuButton} onPress={toggleMenu}>
+            <Ionicons name="menu" size={30} color="#333" />
+          </TouchableOpacity>
+        )}
+
+        {/* === OVERLAY === */}
+        {menuOpen && (
+          <TouchableOpacity
+            style={styles.overlay}
+            activeOpacity={1}
+            onPress={toggleMenu}
+          />
+        )}
+
+        {/* === SIDEBAR === */}
+        <Animated.View style={[styles.sidebar, { left: slideAnim }]}>
+          <View style={styles.sidebarContent}>
+            <Text style={styles.sidebarTitle}>Menu</Text>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                toggleMenu();
+                router.push({ pathname: "/(tabs)", params: { userId } });
+              }}
+            >
+              <Ionicons name="home" size={22} color="#333" />
+              <Text style={styles.menuText}>Home</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuItem, styles.activeItem]}
+            >
+              <Ionicons name="receipt-outline" size={22} color="#fff" />
+              <Text style={styles.activeText}>Transactions</Text>
+            </TouchableOpacity>
+
+            <View style={{ flex: 1 }} />
+
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}
+            >
+              <Ionicons name="log-out-outline" size={22} color="#f5630e" />
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        {/* === HEADER === */}
+        <Text style={styles.header}>Transaction History</Text>
+
+        {/* === TRANSACTIONS === */}
+        {transactions.length === 0 ? (
+          <Text style={styles.emptyText}>No transactions found.</Text>
+        ) : (
+          <FlatList
+            data={transactions}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={["#f5630e"]}
+                tintColor="#f5630e"
+              />
+            }
+          />
+        )}
+      </LinearGradient>
+    </SafeAreaView>
   );
 }
 
-// === STYLES ===
 const styles = StyleSheet.create({
-  screen: {
+  safeArea: { flex: 1, backgroundColor: "#f5efe0ff" },
+  gradientBackground: { flex: 1, width, height },
+  fullScreenCenter: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 70,
+    justifyContent: "center",
+    alignItems: "center",
+    height,
+    width,
   },
   menuButton: {
     position: "absolute",
-    top: 60,
+    top: 10,
     left: 20,
     zIndex: 10,
     padding: 8,
@@ -230,23 +244,23 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
+    width,
+    height,
     backgroundColor: "rgba(0,0,0,0.3)",
-    zIndex: 9,
-    flexDirection: "row",
+    zIndex: 5,
   },
   sidebar: {
-    width: width * 0.6,
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: width * 0.7,
     backgroundColor: "#fff",
     paddingVertical: 60,
     paddingHorizontal: 20,
+    zIndex: 6,
     elevation: 10,
   },
-  sidebarContent: {
-    flex: 1,
-    marginTop: 40,
-  },
+  sidebarContent: { flex: 1 },
   sidebarTitle: {
     fontSize: 22,
     fontWeight: "700",
@@ -264,34 +278,26 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 10,
   },
-  activeText: {
-    fontSize: 18,
-    color: "#fff",
-  },
-  menuText: {
-    fontSize: 18,
-    color: "#333",
-  },
+  activeText: { fontSize: 18, color: "#fff" },
+  menuText: { fontSize: 18, color: "#333" },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     marginBottom: 30,
   },
-  logoutText: {
-    fontSize: 16,
-    color: "#f5630e",
-    fontWeight: "600",
-  },
+  logoutText: { fontSize: 16, color: "#f5630e", fontWeight: "600" },
   header: {
     fontSize: 26,
-    fontWeight: "700",
-    color: "#333",
-    marginBottom: 20,
+    fontWeight: "600",
+    color: "#313131",
+    marginTop: 90,
+    marginBottom: 30,
     textAlign: "center",
   },
   listContainer: {
-    paddingBottom: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 60,
   },
   transactionCard: {
     flexDirection: "row",
@@ -306,15 +312,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  cardLeft: {
-    marginRight: 16,
-  },
-  cardMiddle: {
-    flex: 1,
-  },
-  cardRight: {
-    alignItems: "flex-end",
-  },
+  cardLeft: { marginRight: 16 },
+  cardMiddle: { flex: 1 },
+  cardRight: { alignItems: "flex-end" },
   transactionTitle: {
     fontSize: 16,
     fontWeight: "600",
@@ -327,5 +327,11 @@ const styles = StyleSheet.create({
   transactionPoints: {
     fontSize: 18,
     fontWeight: "700",
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#555",
+    marginTop: 40,
+    fontSize: 16,
   },
 });
