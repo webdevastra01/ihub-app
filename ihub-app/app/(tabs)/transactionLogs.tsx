@@ -113,20 +113,23 @@ export default function TransactionHistoryScreen() {
 
   // === LOADING STATE ===
   if (loading) {
-    return (
-      <View
-        style={[
-          styles.screen,
-          { justifyContent: "center", alignItems: "center" },
-        ]}
-      >
-        <ActivityIndicator size="large" color="#f5630e" />
-        <Text style={{ marginTop: 10, color: "#555" }}>
-          Loading transactions...
-        </Text>
-      </View>
-    );
-  }
+      return (
+        <LinearGradient
+          colors={["#f5efe0ff", "#d8cbc4ff"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[
+            styles.screen,
+            { justifyContent: "center", alignItems: "center" },
+          ]}
+        >
+          <ActivityIndicator size="large" color="#f5630e" />
+          <Text style={{ color: "#333", fontSize: 18, marginTop: 10 }}>
+            Loading...
+          </Text>
+        </LinearGradient>
+      );
+    }
 
   return (
     <LinearGradient
