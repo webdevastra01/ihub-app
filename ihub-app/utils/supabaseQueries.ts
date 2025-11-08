@@ -177,4 +177,37 @@ export async function fetchCustomerPoints({ userId }: { userId: string }) {
   }
 }
 
+type TransactionType = "earn" | "redeem";
+
+export async function fetchTransactions(userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("userId", userId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    const formatted = data.map((t) => ({
+      id: t.receiptNumber || t.created_at,
+      description: t.description || "No description",
+      created_at: new Date(t.created_at).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
+      points:
+        t.transactionType === "earn"
+          ? `+${t.points}`
+          : `-${t.points}`,
+      transactionType: t.transactionType as "earn" | "redeem",
+    }));
+
+    return { success: true, data: formatted };
+  } catch (err: any) {
+    console.error("Error fetching transactions:", err.message);
+    return { success: false, error: err.message };
+  }
+}
 

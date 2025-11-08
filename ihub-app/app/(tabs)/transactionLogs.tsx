@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,10 +8,13 @@ import {
   Animated,
   Dimensions,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { fetchTransactions } from "@/utils/supabaseQueries";
+import { useLocalSearchParams } from "expo-router";
 
 const { width } = Dimensions.get("window");
 
@@ -20,23 +23,19 @@ type TransactionType = "earn" | "redeem";
 
 type Transaction = {
   id: string;
-  title: string;
-  date: string;
+  description: string;
+  created_at: string;
   points: string;
-  type: TransactionType;
+  transactionType: TransactionType;
 };
-
-// === SAMPLE DATA ===
-const transactions: Transaction[] = [
-  { id: "1", title: "Purchased Latte", date: "Nov 3, 2025", points: "-50", type: "redeem" },
-  { id: "2", title: "Referral Bonus", date: "Nov 1, 2025", points: "+200", type: "earn" },
-  { id: "3", title: "Promo Reward", date: "Oct 28, 2025", points: "+100", type: "earn" },
-  { id: "4", title: "Event Raffle", date: "Oct 21, 2025", points: "+300", type: "earn" },
-];
 
 export default function TransactionHistoryScreen() {
   const router = useRouter();
+  const { userId } = useLocalSearchParams();
+  const id = Array.isArray(userId) ? userId[0] : userId ?? "";
   const [menuOpen, setMenuOpen] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const slideAnim = useRef(new Animated.Value(-width * 0.6)).current;
 
   // === SIDEBAR ANIMATION ===
@@ -60,27 +59,50 @@ export default function TransactionHistoryScreen() {
     ]);
   };
 
+  // === FETCH TRANSACTIONS ===
+  useEffect(() => {
+    const loadTransactions = async () => {
+      try {
+        setLoading(true);
+
+        if (!id) throw new Error("User not logged in");
+
+        const result = await fetchTransactions(id);
+
+        if (!result.success) throw new Error(result.error);
+        setTransactions(result.data ?? []);
+      } catch (err: any) {
+        console.error(err);
+        Alert.alert("Error", err.message || "Failed to load transactions.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTransactions();
+  }, []);
+
   // === RENDER TRANSACTION ITEM ===
   const renderItem = ({ item }: { item: Transaction }) => (
     <View style={styles.transactionCard}>
       <View style={styles.cardLeft}>
         <Ionicons
-          name={item.type === "earn" ? "add-circle" : "gift-outline"}
+          name={item.transactionType === "earn" ? "add-circle" : "gift-outline"}
           size={28}
-          color={item.type === "earn" ? "#4CAF50" : "#f5630e"}
+          color={item.transactionType === "earn" ? "#4CAF50" : "#f5630e"}
         />
       </View>
 
       <View style={styles.cardMiddle}>
-        <Text style={styles.transactionTitle}>{item.title}</Text>
-        <Text style={styles.transactionDate}>{item.date}</Text>
+        <Text style={styles.transactionTitle}>{item.description}</Text>
+        <Text style={styles.transactionDate}>{item.created_at}</Text>
       </View>
 
       <View style={styles.cardRight}>
         <Text
           style={[
             styles.transactionPoints,
-            { color: item.type === "earn" ? "#4CAF50" : "#f5630e" },
+            { color: item.transactionType === "earn" ? "#4CAF50" : "#f5630e" },
           ]}
         >
           {item.points}
@@ -88,6 +110,23 @@ export default function TransactionHistoryScreen() {
       </View>
     </View>
   );
+
+  // === LOADING STATE ===
+  if (loading) {
+    return (
+      <View
+        style={[
+          styles.screen,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <ActivityIndicator size="large" color="#f5630e" />
+        <Text style={{ marginTop: 10, color: "#555" }}>
+          Loading transactions...
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <LinearGradient
@@ -119,7 +158,10 @@ export default function TransactionHistoryScreen() {
                 style={styles.menuItem}
                 onPress={() => {
                   toggleMenu();
-                  router.push("/(tabs)");
+                  router.push({
+                    pathname: "/(tabs)",
+                    params: { userId: userId },
+                  });
                 }}
               >
                 <Ionicons name="home" size={22} color="#333" />
@@ -150,13 +192,19 @@ export default function TransactionHistoryScreen() {
       {/* === MAIN CONTENT === */}
       <Text style={styles.header}>Transaction History</Text>
 
-      <FlatList
-        data={transactions}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-      />
+      {transactions.length === 0 ? (
+        <Text style={{ textAlign: "center", color: "#555", marginTop: 40 }}>
+          No transactions found.
+        </Text>
+      ) : (
+        <FlatList
+          data={transactions}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </LinearGradient>
   );
 }

@@ -13,7 +13,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
-import { fetchCustomerDetails, fetchCustomerPoints } from "@/utils/supabaseQueries";
+import {
+  fetchCustomerDetails,
+  fetchCustomerPoints,
+} from "@/utils/supabaseQueries";
+import { ActivityIndicator } from "react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -30,6 +34,7 @@ export default function HomeScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<CustomerDetails | null>(null);
   const [totalPoints, setTotalPoints] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
 
   const flipAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(-width * 0.6)).current;
@@ -48,18 +53,26 @@ export default function HomeScreen() {
   useEffect(() => {
     const loadUserData = async () => {
       if (!userId) return;
+      setLoading(true);
+
       const id = Array.isArray(userId) ? userId[0] : userId;
 
-      // 🧩 Fetch user details
-      const result = await fetchCustomerDetails({ userId: id });
-      setUserInfo(result);
+      try {
+        // 🧩 Fetch user details
+        const result = await fetchCustomerDetails({ userId: id });
+        setUserInfo(result);
 
-      // 🧩 Fetch points
-      const pointsResult = await fetchCustomerPoints({ userId: id });
-      if (pointsResult.success) {
-        setTotalPoints(pointsResult.points ?? 0);
-      } else {
-        console.error("Error loading points:", pointsResult.error);
+        // 🧩 Fetch points
+        const pointsResult = await fetchCustomerPoints({ userId: id });
+        if (pointsResult.success) {
+          setTotalPoints(pointsResult.points ?? 0);
+        } else {
+          console.error("Error loading points:", pointsResult.error);
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -96,6 +109,25 @@ export default function HomeScreen() {
       },
     ]);
   };
+
+  if (loading) {
+    return (
+      <LinearGradient
+        colors={["#f5efe0ff", "#d8cbc4ff"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[
+          styles.screen,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <ActivityIndicator size="large" color="#f5630e" />
+        <Text style={{ color: "#333", fontSize: 18, marginTop: 10 }}>
+          Loading...
+        </Text>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
@@ -136,7 +168,10 @@ export default function HomeScreen() {
             style={styles.menuItem}
             onPress={() => {
               toggleMenu();
-              router.push("/(tabs)/transactionLogs");
+              router.push({
+                pathname: "/(tabs)/transactionLogs",
+                params: { userId: userId },
+              });
             }}
           >
             <Ionicons name="receipt-outline" size={22} color="#333" />
@@ -196,7 +231,9 @@ export default function HomeScreen() {
                         userInfo?.user.surname?.toUpperCase() || ""
                       }`}
                     </Text>
-                    <Text style={styles.cardSubtitle}>{userInfo?.user.userId}</Text>
+                    <Text style={styles.cardSubtitle}>
+                      {userInfo?.user.userId}
+                    </Text>
                   </View>
                 </View>
 
@@ -204,11 +241,15 @@ export default function HomeScreen() {
                 <View style={[styles.row, { marginTop: 10 }]}>
                   <View style={styles.infoBlock}>
                     <Text style={styles.cardSmallLabel}>MEMBER SINCE</Text>
-                    <Text style={styles.cardSubtitle}>{userInfo?.user.memberSince}</Text>
+                    <Text style={styles.cardSubtitle}>
+                      {userInfo?.user.memberSince}
+                    </Text>
                   </View>
                   <View style={styles.infoBlock}>
                     <Text style={styles.cardSmallLabel}>VALID THRU</Text>
-                    <Text style={styles.cardSubtitle}>{userInfo?.user.memberUntil}</Text>
+                    <Text style={styles.cardSubtitle}>
+                      {userInfo?.user.memberUntil}
+                    </Text>
                   </View>
                 </View>
 
@@ -240,10 +281,12 @@ export default function HomeScreen() {
       {/* Claim Points */}
       <TouchableOpacity
         style={styles.button}
-        onPress={() => router.push({
-          pathname: "/(tabs)/customerDetails",
-          params: { userId: userId },
-        })}
+        onPress={() =>
+          router.push({
+            pathname: "/(tabs)/customerDetails",
+            params: { userId: userId },
+          })
+        }
       >
         <Text style={styles.buttonText}>Claim Points</Text>
       </TouchableOpacity>
