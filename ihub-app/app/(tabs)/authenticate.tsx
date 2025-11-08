@@ -45,14 +45,14 @@ export default function LoginScreen() {
       });
 
       if (success && user) {
-        console.log("Login successful:", user);
-
-        // ✅ Save user locally if “Remember me” is checked
         if (remember) {
           await SecureStore.setItemAsync("user", JSON.stringify(user));
         }
 
-        router.replace("/(tabs)");
+        router.replace({
+          pathname: "/(tabs)",
+          params: { userId: user.userId },
+        });
       } else {
         alert(error || "Invalid credentials. Please try again.");
       }

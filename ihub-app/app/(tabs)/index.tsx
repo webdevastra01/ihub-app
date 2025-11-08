@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,16 +12,27 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams } from "expo-router";
+import { fetchCustomerDetails, fetchCustomerPoints } from "@/utils/supabaseQueries";
 
 const { width } = Dimensions.get("window");
 
+type CustomerDetails = {
+  success: boolean;
+  user?: any;
+  error?: string;
+};
+
 export default function HomeScreen() {
   const router = useRouter();
+  const { userId } = useLocalSearchParams();
   const [flipped, setFlipped] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userInfo, setUserInfo] = useState<CustomerDetails | null>(null);
+  const [totalPoints, setTotalPoints] = useState<number>(0);
 
   const flipAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(-width * 0.6)).current; // sidebar starts hidden
+  const slideAnim = useRef(new Animated.Value(-width * 0.6)).current;
 
   // === CARD FLIP ===
   const frontInterpolate = flipAnim.interpolate({
@@ -33,6 +44,27 @@ export default function HomeScreen() {
     inputRange: [0, 180],
     outputRange: ["180deg", "360deg"],
   });
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!userId) return;
+      const id = Array.isArray(userId) ? userId[0] : userId;
+
+      // 🧩 Fetch user details
+      const result = await fetchCustomerDetails({ userId: id });
+      setUserInfo(result);
+
+      // 🧩 Fetch points
+      const pointsResult = await fetchCustomerPoints({ userId: id });
+      if (pointsResult.success) {
+        setTotalPoints(pointsResult.points ?? 0);
+      } else {
+        console.error("Error loading points:", pointsResult.error);
+      }
+    };
+
+    loadUserData();
+  }, [userId]);
 
   const handleFlip = () => {
     Animated.spring(flipAnim, {
@@ -122,7 +154,9 @@ export default function HomeScreen() {
       </Animated.View>
 
       {/* === MAIN CONTENT === */}
-      <Text style={styles.welcomeText}>Welcome, Sarah!</Text>
+      <Text style={styles.welcomeText}>
+        Welcome, {userInfo?.user.firstname}!
+      </Text>
 
       <TouchableOpacity onPress={handleFlip} activeOpacity={0.9}>
         <View style={styles.container}>
@@ -157,8 +191,12 @@ export default function HomeScreen() {
                 {/* Name + ID */}
                 <View style={styles.row}>
                   <View>
-                    <Text style={styles.cardTitle}>SARAH MAY BANGAHON</Text>
-                    <Text style={styles.cardSubtitle}>784256</Text>
+                    <Text style={styles.cardTitle}>
+                      {`${userInfo?.user.firstname?.toUpperCase() || ""} ${
+                        userInfo?.user.surname?.toUpperCase() || ""
+                      }`}
+                    </Text>
+                    <Text style={styles.cardSubtitle}>{userInfo?.user.userId}</Text>
                   </View>
                 </View>
 
@@ -166,11 +204,11 @@ export default function HomeScreen() {
                 <View style={[styles.row, { marginTop: 10 }]}>
                   <View style={styles.infoBlock}>
                     <Text style={styles.cardSmallLabel}>MEMBER SINCE</Text>
-                    <Text style={styles.cardSubtitle}>11/25</Text>
+                    <Text style={styles.cardSubtitle}>{userInfo?.user.memberSince}</Text>
                   </View>
                   <View style={styles.infoBlock}>
                     <Text style={styles.cardSmallLabel}>VALID THRU</Text>
-                    <Text style={styles.cardSubtitle}>11/26</Text>
+                    <Text style={styles.cardSubtitle}>{userInfo?.user.memberUntil}</Text>
                   </View>
                 </View>
 
@@ -196,7 +234,7 @@ export default function HomeScreen() {
       {/* Points Info */}
       <View style={styles.infoContainer}>
         <Text style={styles.pointsText}>Total iAccess Points</Text>
-        <Text style={styles.pointsValue}>200</Text>
+        <Text style={styles.pointsValue}>{totalPoints}</Text>
       </View>
 
       {/* Claim Points */}

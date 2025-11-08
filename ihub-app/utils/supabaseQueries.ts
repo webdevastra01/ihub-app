@@ -105,7 +105,7 @@ export async function signInUser({
     // 🧩 Look up the user by email
     const { data: user, error } = await supabase
       .from("users")
-      .select("*")
+      .select("userId, secret")
       .eq("email", email)
       .maybeSingle();
 
@@ -121,12 +121,7 @@ export async function signInUser({
     return {
       success: true,
       user: {
-        userId: user.id,
-        firstname: user.firstname,
-        surname: user.surname,
-        email: user.email,
-        memberSince: user.memberSince,
-        memberUntil: user.memberUntil,
+        userId: user.userId,
       },
     };
   } catch (err: any) {
@@ -134,3 +129,52 @@ export async function signInUser({
     return { success: false, error: err.message };
   }
 }
+
+export async function fetchCustomerDetails({ userId }: { userId: string }) {
+  try {
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("userId", userId)
+      .maybeSingle();
+
+    if (error) throw new Error(`Supabase error: ${error.message}`);
+    if (!user) throw new Error("No account found for this user ID");
+
+    return { success: true, user };
+  } catch (err: any) {
+    console.error("Error fetching customer details:", err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function fetchCustomerPoints({ userId }: { userId: string }) {
+  try {
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("points, transactionType")
+      .eq("userId", userId);
+
+    if (error) throw new Error(`Supabase error: ${error.message}`);
+    if (!data || data.length === 0) throw new Error("No transactions found for this user ID");
+
+    // 🧮 Calculate net points (convert to number safely)
+    const totalPoints = data.reduce((sum, item) => {
+      const pointsValue = Number(item.points) || 0; // ✅ convert string → number safely
+
+      if (item.transactionType === "earn") {
+        return sum + pointsValue;
+      } else if (item.transactionType === "redeem") {
+        return sum - pointsValue;
+      }
+      return sum;
+    }, 0);
+
+    return { success: true, points: totalPoints };
+  } catch (err: any) {
+    console.error("Error fetching customer points:", err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+
