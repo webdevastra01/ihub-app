@@ -240,7 +240,10 @@ export default function HomeScreen() {
       {/* Claim Points */}
       <TouchableOpacity
         style={styles.button}
-        onPress={() => router.push("/(tabs)/customerDetails")}
+        onPress={() => router.push({
+          pathname: "/(tabs)/customerDetails",
+          params: { userId: userId },
+        })}
       >
         <Text style={styles.buttonText}>Claim Points</Text>
       </TouchableOpacity>

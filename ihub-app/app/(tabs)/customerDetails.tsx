@@ -4,10 +4,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import QRCode from "react-native-qrcode-svg";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams } from "expo-router";
 
 export default function QrScreen() {
   const router = useRouter();
-  const userId = "784256";
+  const { userId } = useLocalSearchParams();
+  const id = Array.isArray(userId) ? userId[0] : userId ?? "";
 
   return (
     <LinearGradient
@@ -26,7 +28,7 @@ export default function QrScreen() {
 
         {/* QR Code */}
         <View style={styles.qrContainer}>
-          <QRCode value={userId} size={180} color="#333" backgroundColor="white" />
+          <QRCode value={id} size={180} color="#333" backgroundColor="white" />
         </View>
 
         {/* ID Number */}
