@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { fetchTransactions } from "@/utils/supabaseQueries";
+import * as SecureStore from "expo-secure-store";
 
 const { width, height } = Dimensions.get("window");
 
@@ -50,16 +51,27 @@ export default function TransactionHistoryScreen() {
     setMenuOpen(!menuOpen);
   };
 
-  const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: () => router.replace("/authenticate"),
+  const handleLogout = async () => {
+  Alert.alert("Logout", "Are you sure you want to logout?", [
+    { text: "Cancel", style: "cancel" },
+    {
+      text: "Logout",
+      style: "destructive",
+      onPress: async () => {
+        try {
+          // Delete stored user data
+          await SecureStore.deleteItemAsync("user");
+          console.log("User data cleared from SecureStore");
+
+          // Then redirect to login
+          router.replace("/authenticate");
+        } catch (error) {
+          console.error("Error clearing SecureStore:", error);
+        }
       },
-    ]);
-  };
+    },
+  ]);
+};
 
   const loadTransactions = async (showLoader = true) => {
     try {

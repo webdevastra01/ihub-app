@@ -14,12 +14,17 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import {
+  useRouter,
+  useLocalSearchParams,
+  useRootNavigationState,
+} from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   fetchCustomerDetails,
   fetchCustomerPoints,
 } from "@/utils/supabaseQueries";
+import * as SecureStore from "expo-secure-store";
 
 const { width, height } = Dimensions.get("window");
 
@@ -31,7 +36,9 @@ type CustomerDetails = {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const rootNavigationState = useRootNavigationState();
   const { userId } = useLocalSearchParams();
+
   const [flipped, setFlipped] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<CustomerDetails | null>(null);
@@ -46,7 +53,6 @@ export default function HomeScreen() {
     inputRange: [0, 180],
     outputRange: ["0deg", "180deg"],
   });
-
   const backInterpolate = flipAnim.interpolate({
     inputRange: [0, 180],
     outputRange: ["180deg", "360deg"],
@@ -56,8 +62,6 @@ export default function HomeScreen() {
     Animated.spring(flipAnim, {
       toValue: flipped ? 0 : 180,
       useNativeDriver: true,
-      friction: 8,
-      tension: 10,
     }).start();
     setFlipped(!flipped);
   };
@@ -72,7 +76,12 @@ export default function HomeScreen() {
   };
 
   const loadUserData = async () => {
-    if (!userId) return;
+    // If no userId, we must stop loading and redirect
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
     const id = Array.isArray(userId) ? userId[0] : userId;
     try {
       setRefreshing(true);
@@ -93,21 +102,40 @@ export default function HomeScreen() {
     }
   };
 
+  // Running loadUserData once when navigation is ready or userId changes
   useEffect(() => {
-    setLoading(true);
+    if (!rootNavigationState?.key) return; // wait until layout is ready
     loadUserData();
-  }, [userId]);
+  }, [userId, rootNavigationState?.key]);
 
-  const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: () => router.replace("/authenticate"),
+  // Redirect effect
+  useEffect(() => {
+    if (!loading && !userId) {
+      router.replace("/authenticate");
+    }
+  }, [loading, userId]);
+
+  const handleLogout = async () => {
+  Alert.alert("Logout", "Are you sure you want to logout?", [
+    { text: "Cancel", style: "cancel" },
+    {
+      text: "Logout",
+      style: "destructive",
+      onPress: async () => {
+        try {
+          // Delete stored user data
+          await SecureStore.deleteItemAsync("user");
+          console.log("User data cleared from SecureStore");
+
+          // Then redirect to login
+          router.replace("/authenticate");
+        } catch (error) {
+          console.error("Error clearing SecureStore:", error);
+        }
       },
-    ]);
-  };
+    },
+  ]);
+};
 
   if (loading) {
     return (
@@ -115,7 +143,7 @@ export default function HomeScreen() {
         colors={["#f5efe0ff", "#d8cbc4ff"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.fullScreenCenter]}
+        style={styles.fullScreenCenter}
       >
         <ActivityIndicator size="large" color="#f5630e" />
         <Text style={{ color: "#333", fontSize: 18, marginTop: 10 }}>
@@ -123,6 +151,11 @@ export default function HomeScreen() {
         </Text>
       </LinearGradient>
     );
+  }
+
+  if (!userId) {
+    // navigation will happen via effect
+    return null;
   }
 
   return (
@@ -206,10 +239,7 @@ export default function HomeScreen() {
           <TouchableOpacity onPress={handleFlip} activeOpacity={0.9}>
             <View style={styles.cardContainer}>
               <Animated.View
-                style={[
-                  styles.card,
-                  { transform: [{ rotateY: frontInterpolate }] },
-                ]}
+                style={[styles.card, { transform: [{ rotateY: frontInterpolate }] }]}
               >
                 <ImageBackground
                   source={require("@/assets/images/card_front.png")}
@@ -239,7 +269,6 @@ export default function HomeScreen() {
                     <Text style={styles.cardSubtitle}>
                       {userInfo?.user?.userId}
                     </Text>
-
                     <View style={[styles.row, { marginTop: 10 }]}>
                       <View style={styles.infoBlock}>
                         <Text style={styles.cardSmallLabel}>MEMBER SINCE</Text>
@@ -273,13 +302,11 @@ export default function HomeScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* === POINTS === */}
           <View style={styles.infoContainer}>
             <Text style={styles.pointsText}>Total iAccess Points</Text>
             <Text style={styles.pointsValue}>{totalPoints}</Text>
           </View>
 
-          {/* === CLAIM BUTTON === */}
           <TouchableOpacity
             style={styles.button}
             onPress={() =>
@@ -299,11 +326,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f5efe0ff" },
-  gradientBackground: {
-    flex: 1,
-    width,
-    height,
-  },
+  gradientBackground: { flex: 1, width, height },
   scrollContainer: {
     flexGrow: 1,
     alignItems: "center",
@@ -312,21 +335,14 @@ const styles = StyleSheet.create({
     paddingTop: 100,
     width: "100%",
   },
-
   fullScreenCenter: {
     flex: 1,
-    height: height,
-    width: width,
+    height,
+    width,
     justifyContent: "center",
     alignItems: "center",
   },
-  menuButton: {
-    position: "absolute",
-    top: 10,
-    left: 20,
-    zIndex: 10,
-    padding: 8,
-  },
+  menuButton: { position: "absolute", top: 10, left: 20, zIndex: 10, padding: 8 },
   overlay: {
     position: "absolute",
     top: 0,
@@ -396,23 +412,9 @@ const styles = StyleSheet.create({
   },
   cardBack: { transform: [{ rotateY: "180deg" }] },
   cardBackground: { flex: 1 },
-  cardContent: {
-    flex: 1,
-    justifyContent: "flex-end",
-    padding: 20,
-  },
+  cardContent: { flex: 1, justifyContent: "flex-end", padding: 20 },
   cardTitle: { fontSize: 18, fontWeight: "700", color: "#fff" },
   cardSubtitle: { fontSize: 14, color: "#f5f5f5" },
-  infoBlock: { flex: 1, marginRight: 20 },
-  cardSmallLabel: { fontSize: 10, fontWeight: "600", color: "#ddd" },
-  cardSmallText: {
-    fontSize: 7,
-    color: "#eaeaea",
-    marginBottom: 3,
-    lineHeight: 10,
-  },
-  termsContainer: { marginTop: 10 },
-  row: { flexDirection: "row", justifyContent: "space-between" },
   infoContainer: { alignItems: "center", marginBottom: 20 },
   pointsText: { fontSize: 18, color: "#313131", opacity: 0.9 },
   pointsValue: { fontSize: 38, fontWeight: "bold", color: "#313131" },
@@ -428,4 +430,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
   },
+  infoBlock: { flex: 1, marginRight: 20 },
+  cardSmallLabel: { fontSize: 10, fontWeight: "600", color: "#ddd" },
+  cardSmallText: {
+    fontSize: 7,
+    color: "#eaeaea",
+    marginBottom: 3,
+    lineHeight: 10,
+  },
+  termsContainer: { marginTop: 10 },
+  row: { flexDirection: "row", justifyContent: "space-between" },
 });

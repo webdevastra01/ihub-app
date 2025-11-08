@@ -25,8 +25,11 @@ export default function LoginScreen() {
       const savedUser = await SecureStore.getItemAsync("user");
       if (savedUser) {
         const parsedUser = JSON.parse(savedUser);
-        console.log("Auto-login as:", parsedUser.email);
-        router.replace("/(tabs)");
+        console.log("Auto-login as:", parsedUser.userId);
+        router.replace({
+          pathname: "/(tabs)",
+          params: { userId: parsedUser.userId },
+        });
       }
     };
     loadRememberedUser();
