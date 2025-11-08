@@ -49,11 +49,10 @@ export default function SignUpScreen() {
       alert("Please fill in all required fields.");
       return;
     }
-    console.log("Signing up with:", form);
 
     try {
       // Call Supabase signup query
-      const { success, error, userId } = await signUpUser({
+      const { success, error } = await signUpUser({
         firstname: form.firstname,
         surname: form.surname,
         birthday: form.birthday,
@@ -71,14 +70,6 @@ export default function SignUpScreen() {
     } catch (err: any) {
       console.error(err);
       alert("Something went wrong. Please try again later.");
-    }
-  };
-
-  const handleDateChange = (_: any, date?: Date) => {
-    setShowDatePicker(false);
-    if (date) {
-      setSelectedDate(date);
-      handleChange("birthday", date.toISOString());
     }
   };
 
@@ -157,7 +148,7 @@ export default function SignUpScreen() {
                   setShowDatePicker(false);
                   if (date) {
                     setSelectedDate(date);
-                    handleChange("birthday", date.toISOString()); // store ISO string for DB
+                    handleChange("birthday", date.toLocaleDateString());
                   }
                 }}
               />

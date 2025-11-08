@@ -44,9 +44,6 @@ export async function signUpUser({
       throw new Error("Invalid password format");
     }
 
-    // 🧩 Format date properly
-    const formattedBirthday = new Date(birthday).toISOString().split("T")[0];
-
     // 🧩 Hash the password
     const hashedPassword = crypto
       .createHash("sha256")
@@ -56,17 +53,24 @@ export async function signUpUser({
     // 🧩 Generate unique ID
     const userId = await generateUniqueUserId();
 
+    // 🧩 Set membership dates
+    const memberSince = new Date();
+    const memberUntil = new Date();
+    memberUntil.setFullYear(memberUntil.getFullYear() + 1);
+
     // 🧩 Insert user
-    const { data, error } = await supabase.from("users").insert([
+    const { error } = await supabase.from("users").insert([
       {
         userId: userId,
         firstname,
         surname,
-        birthday: formattedBirthday,
+        birthday,
         contactNumber: contactNumber,
         email,
         secret: hashedPassword,
         referralCode: referralCode || null,
+        memberSince,
+        memberUntil: memberUntil,
       },
     ]);
 
@@ -75,6 +79,56 @@ export async function signUpUser({
     return { success: true, userId };
   } catch (err: any) {
     console.error("Error signing up:", err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function signInUser({
+  email,
+  secret,
+}: {
+  email: string;
+  secret: string;
+}) {
+  try {
+    // 🧩 Validate inputs
+    if (!email || !secret) {
+      throw new Error("Email and password are required");
+    }
+
+    // 🧩 Hash the entered password to compare with stored hash
+    const hashedPassword = crypto
+      .createHash("sha256")
+      .update(secret)
+      .digest("hex");
+
+    // 🧩 Look up the user by email
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!user) throw new Error("No account found for this email");
+
+    // 🧩 Compare passwords
+    if (user.secret !== hashedPassword) {
+      throw new Error("Incorrect password");
+    }
+
+    // 🧩 Return success with user info
+    return {
+      success: true,
+      user: {
+        userId: user.id,
+        firstname: user.firstname,
+        surname: user.surname,
+        email: user.email,
+      },
+    };
+  } catch (err: any) {
+    console.error("Error signing in:", err.message);
     return { success: false, error: err.message };
   }
 }
