@@ -125,6 +125,8 @@ export async function signInUser({
         firstname: user.firstname,
         surname: user.surname,
         email: user.email,
+        memberSince: user.memberSince,
+        memberUntil: user.memberUntil,
       },
     };
   } catch (err: any) {

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import * as SecureStore from "expo-secure-store";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +10,7 @@ import {
 } from "react-native";
 import Checkbox from "expo-checkbox";
 import { LinearGradient } from "expo-linear-gradient";
+import { signInUser } from "@/utils/supabaseQueries";
 import { useRouter } from "expo-router";
 
 export default function LoginScreen() {
@@ -18,11 +20,46 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
 
-  const handleLogin = () => {
-    console.log("Email:", email);
-    console.log("Password:", password);
-    console.log("Remember me:", remember);
-    router.replace("/(tabs)");
+  useEffect(() => {
+    const loadRememberedUser = async () => {
+      const savedUser = await SecureStore.getItemAsync("user");
+      if (savedUser) {
+        const parsedUser = JSON.parse(savedUser);
+        console.log("Auto-login as:", parsedUser.email);
+        router.replace("/(tabs)");
+      }
+    };
+    loadRememberedUser();
+  }, []);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      alert("Please enter both email and password.");
+      return;
+    }
+
+    try {
+      const { success, user, error } = await signInUser({
+        email,
+        secret: password,
+      });
+
+      if (success && user) {
+        console.log("Login successful:", user);
+
+        // ✅ Save user locally if “Remember me” is checked
+        if (remember) {
+          await SecureStore.setItemAsync("user", JSON.stringify(user));
+        }
+
+        router.replace("/(tabs)");
+      } else {
+        alert(error || "Invalid credentials. Please try again.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert("Something went wrong. Please try again later.");
+    }
   };
 
   return (
@@ -75,7 +112,9 @@ export default function LoginScreen() {
 
         <View style={styles.signupContainer}>
           <Text style={styles.signupText}>Don’t have an account? </Text>
-          <TouchableOpacity onPress={() => router.push("/(tabs)/accountCreation")}>
+          <TouchableOpacity
+            onPress={() => router.push("/(tabs)/accountCreation")}
+          >
             <Text style={styles.signupLink}>Sign up</Text>
           </TouchableOpacity>
         </View>
@@ -118,7 +157,7 @@ const styles = StyleSheet.create({
     color: "#111",
     marginBottom: 16,
     shadowColor: "#333",
-    shadowOffset: { width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
   },
