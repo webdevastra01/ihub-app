@@ -10,6 +10,7 @@ export default function Layout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="customerDetails" />
       <Stack.Screen name="transactionLogs" />
+      <Stack.Screen name="perks" />
     </Stack>
   );
 }

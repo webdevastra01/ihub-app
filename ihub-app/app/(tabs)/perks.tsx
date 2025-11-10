@@ -30,7 +30,7 @@ type Transaction = {
   transactionType: TransactionType;
 };
 
-export default function TransactionHistoryScreen() {
+export default function PerksScreen() {
   const router = useRouter();
   const { userId } = useLocalSearchParams();
   const id = Array.isArray(userId) ? userId[0] : userId ?? "";
@@ -188,23 +188,23 @@ export default function TransactionHistoryScreen() {
               <Text style={styles.menuText}>Home</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.menuItem, styles.activeItem]}>
-              <Ionicons name="receipt-outline" size={22} color="#fff" />
-              <Text style={styles.activeText}>Transactions</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
                 toggleMenu();
                 router.push({
-                  pathname: "/(tabs)/perks",
+                  pathname: "/(tabs)/transactionLogs",
                   params: { userId },
                 });
               }}
             >
-              <Ionicons name="sparkles-sharp" size={22} color="#333" />
-              <Text style={styles.menuText}>Perks</Text>
+              <Ionicons name="receipt-outline" size={22} color="#333" />
+              <Text style={styles.menuText}>Transactions</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.menuItem, styles.activeItem]}>
+              <Ionicons name="sparkles-sharp" size={22} color="#fff" />
+              <Text style={styles.activeText}>Perks</Text>
             </TouchableOpacity>
 
             <View style={{ flex: 1 }} />
@@ -220,7 +220,7 @@ export default function TransactionHistoryScreen() {
         </Animated.View>
 
         {/* === HEADER === */}
-        <Text style={styles.header}>Transaction History</Text>
+        <Text style={styles.header}>List of Perks</Text>
 
         {/* === TRANSACTIONS === */}
         {transactions.length === 0 ? (

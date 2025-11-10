@@ -116,26 +116,26 @@ export default function HomeScreen() {
   }, [loading, userId]);
 
   const handleLogout = async () => {
-  Alert.alert("Logout", "Are you sure you want to logout?", [
-    { text: "Cancel", style: "cancel" },
-    {
-      text: "Logout",
-      style: "destructive",
-      onPress: async () => {
-        try {
-          // Delete stored user data
-          await SecureStore.deleteItemAsync("user");
-          console.log("User data cleared from SecureStore");
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            // Delete stored user data
+            await SecureStore.deleteItemAsync("user");
+            console.log("User data cleared from SecureStore");
 
-          // Then redirect to login
-          router.replace("/authenticate");
-        } catch (error) {
-          console.error("Error clearing SecureStore:", error);
-        }
+            // Then redirect to login
+            router.replace("/authenticate");
+          } catch (error) {
+            console.error("Error clearing SecureStore:", error);
+          }
+        },
       },
-    },
-  ]);
-};
+    ]);
+  };
 
   if (loading) {
     return (
@@ -218,6 +218,20 @@ export default function HomeScreen() {
                 <Text style={styles.menuText}>Transactions</Text>
               </TouchableOpacity>
 
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  toggleMenu();
+                  router.push({
+                    pathname: "/(tabs)/perks",
+                    params: { userId },
+                  });
+                }}
+              >
+                <Ionicons name="sparkles-sharp" size={22} color="#333" />
+                <Text style={styles.menuText}>Perks</Text>
+              </TouchableOpacity>
+
               <View style={{ flex: 1 }} />
 
               <TouchableOpacity
@@ -239,7 +253,10 @@ export default function HomeScreen() {
           <TouchableOpacity onPress={handleFlip} activeOpacity={0.9}>
             <View style={styles.cardContainer}>
               <Animated.View
-                style={[styles.card, { transform: [{ rotateY: frontInterpolate }] }]}
+                style={[
+                  styles.card,
+                  { transform: [{ rotateY: frontInterpolate }] },
+                ]}
               >
                 <ImageBackground
                   source={require("@/assets/images/card_front.png")}
@@ -342,7 +359,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  menuButton: { position: "absolute", top: 10, left: 20, zIndex: 10, padding: 8 },
+  menuButton: {
+    position: "absolute",
+    top: 10,
+    left: 20,
+    zIndex: 10,
+    padding: 8,
+  },
   overlay: {
     position: "absolute",
     top: 0,
