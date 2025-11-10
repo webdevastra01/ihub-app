@@ -207,6 +207,20 @@ export default function TransactionHistoryScreen() {
               <Text style={styles.menuText}>Perks</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                toggleMenu();
+                router.push({
+                  pathname: "/(tabs)/rewards",
+                  params: { userId },
+                });
+              }}
+            >
+              <Ionicons name="gift-outline" size={22} color="#333" />
+              <Text style={styles.menuText}>Rewards</Text>
+            </TouchableOpacity>
+
             <View style={{ flex: 1 }} />
 
             <TouchableOpacity

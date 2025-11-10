@@ -11,6 +11,7 @@ export default function Layout() {
       <Stack.Screen name="customerDetails" />
       <Stack.Screen name="transactionLogs" />
       <Stack.Screen name="perks" />
+      <Stack.Screen name="rewards" />
     </Stack>
   );
 }

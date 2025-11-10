@@ -7,25 +7,37 @@ import {
   TouchableOpacity,
   Animated,
   Dimensions,
+  Image,
+  Modal,
   Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import * as SecureStore from "expo-secure-store";
+import QRCode from "react-native-qrcode-svg";
 
 const { width, height } = Dimensions.get("window");
 
-export default function PerksScreen() {
+type Reward = {
+  id: number;
+  name: string;
+  points: number;
+  voucherCode: string;
+  description: string;
+  image: string;
+};
+
+export default function RewardsScreen() {
   const router = useRouter();
   const { userId } = useLocalSearchParams();
   const id = Array.isArray(userId) ? userId[0] : userId ?? "";
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const slideAnim = useRef(new Animated.Value(-width * 0.7)).current;
 
-  // === SIDEBAR TOGGLE ===
   const toggleMenu = () => {
     Animated.timing(slideAnim, {
       toValue: menuOpen ? -width * 0.7 : 0,
@@ -54,49 +66,42 @@ export default function PerksScreen() {
     ]);
   };
 
-  // === PERKS DATA ===
-  const perksData = [
+  // === REWARD DATA ===
+  const rewards = [
     {
-      title: "🎯 General Benefits",
-      perks: [
-        "Earn 20 points per visit/order at iEat / iDrink",
-        "5% birthday discount",
-        "Redeem points starting at 300 points",
-        "50 points per referral",
-        "Free virtual membership card (QR-based)",
-      ],
+      id: 1,
+      name: "Free Coffee",
+      points: 100,
+      voucherCode: "COF12345",
+      description: "Get a free cup of coffee at iDrink or iEat.",
+      image:
+        "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800",
     },
     {
-      title: "🍽️ iEAT — Good Food, Better Days",
-      perks: [
-        "Earn 20 points per ₱200 spent",
-        "Free coffee or iced tea on 5th visit",
-        "5% birthday discount",
-      ],
+      id: 2,
+      name: "Movie Ticket",
+      points: 300,
+      voucherCode: "MOV99123",
+      description: "Enjoy a free movie pass for one person.",
+      image:
+        "https://images.unsplash.com/photo-1524985069026-dd778a71c7b4?w=800",
     },
     {
-      title: "☕ iDRINK — Sip, Chill, and Stay",
-      perks: [
-        "Buy 5 drinks, get 1 free",
-        "Free water refill access",
-        "Free upgrade to large every 10 drinks",
-      ],
+      id: 3,
+      name: "₱200 Discount",
+      points: 250,
+      voucherCode: "DISC200",
+      description: "₱200 off on your next purchase at partner stores.",
+      image:
+        "https://images.unsplash.com/photo-1607082349566-187342175e2b?w=800",
     },
     {
-      title: "💻 iWORK — Your Office Away from Office",
-      perks: ["Free 1-hour iWork access upon sign-up", "Wi-Fi up to 50 Mbps"],
-    },
-    {
-      title: "🎯 iPLAY — Fun Never Clocks Out",
-      perks: ["10% off darts & billiards", "Access to member game nights"],
-    },
-    {
-      title: "☁️ iLOUNGE — Your Everyday Comfort Spot",
-      perks: ["Free lounge access with any order", "Member Wi-Fi zone"],
-    },
-    {
-      title: "🎉 EVENT / VENUE — Celebrate Your Now",
-      perks: ["5% off venue rental once per year"],
+      id: 4,
+      name: "Free Dessert",
+      points: 150,
+      voucherCode: "SWT887",
+      description: "Free dessert with any dine-in meal.",
+      image: "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=800",
     },
   ];
 
@@ -108,6 +113,13 @@ export default function PerksScreen() {
         end={{ x: 1, y: 1 }}
         style={styles.gradientBackground}
       >
+        {/* === MENU BUTTON === */}
+        {!menuOpen && (
+          <TouchableOpacity style={styles.menuButton} onPress={toggleMenu}>
+            <Ionicons name="menu" size={30} color="#333" />
+          </TouchableOpacity>
+        )}
+
         {/* === HAMBURGER === */}
         {!menuOpen && (
           <TouchableOpacity style={styles.menuButton} onPress={toggleMenu}>
@@ -154,23 +166,23 @@ export default function PerksScreen() {
               <Text style={styles.menuText}>Transactions</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.menuItem, styles.activeItem]}>
-              <Ionicons name="sparkles-sharp" size={22} color="#fff" />
-              <Text style={styles.activeText}>Perks</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
                 toggleMenu();
                 router.push({
-                  pathname: "/(tabs)/rewards",
+                  pathname: "/(tabs)/perks",
                   params: { userId },
                 });
               }}
             >
-              <Ionicons name="gift-outline" size={22} color="#333" />
-              <Text style={styles.menuText}>Rewards</Text>
+              <Ionicons name="sparkles-sharp" size={22} color="#333" />
+              <Text style={styles.menuText}>Perks</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.menuItem, styles.activeItem]}>
+              <Ionicons name="gift-outline" size={22} color="#fff" />
+              <Text style={styles.activeText}>Rewards</Text>
             </TouchableOpacity>
 
             <View style={{ flex: 1 }} />
@@ -186,25 +198,60 @@ export default function PerksScreen() {
         </Animated.View>
 
         {/* === HEADER === */}
-        <Text style={styles.header}>List of Perks</Text>
+        <Text style={styles.header}>Rewards</Text>
 
-        {/* === PERKS LIST === */}
+        {/* === REWARD CARDS === */}
         <FlatList
-          data={perksData}
-          keyExtractor={(item) => item.title}
-          contentContainerStyle={styles.perksContainer}
+          data={rewards}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={2}
+          contentContainerStyle={styles.rewardsContainer}
           renderItem={({ item }) => (
-            <View style={styles.perkCard}>
-              <Text style={styles.perkTitle}>{item.title}</Text>
-              {item.perks.map((perk, i) => (
-                <View key={i} style={styles.perkItem}>
-                  <Ionicons name="checkmark-circle" size={18} color="#f5630e" />
-                  <Text style={styles.perkText}>{perk}</Text>
-                </View>
-              ))}
+            <View style={styles.card}>
+              <Image source={{ uri: item.image }} style={styles.image} />
+              <View style={styles.cardContent}>
+                <Text style={styles.cardTitle}>{item.name}</Text>
+                <Text style={styles.cardDesc} numberOfLines={2}>
+                  {item.description}
+                </Text>
+                <Text style={styles.points}>{item.points} pts</Text>
+                <TouchableOpacity
+                  style={styles.redeemButton}
+                  onPress={() => setSelectedReward(item)}
+                >
+                  <Text style={styles.redeemText}>Redeem</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         />
+
+        {/* === REDEEM MODAL === */}
+        <Modal
+          visible={!!selectedReward}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSelectedReward(null)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>{selectedReward?.name}</Text>
+              <View style={{ alignItems: "center", marginVertical: 20 }}>
+                <QRCode value={selectedReward?.voucherCode || ""} size={180} />
+              </View>
+              <Text style={styles.voucherCode}>
+                Code: {selectedReward?.voucherCode}
+              </Text>
+
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setSelectedReward(null)}
+              >
+                <Text style={styles.closeText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </LinearGradient>
     </SafeAreaView>
   );
@@ -238,7 +285,6 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
     paddingHorizontal: 20,
     zIndex: 6,
-    elevation: 10,
   },
   sidebarContent: { flex: 1 },
   sidebarTitle: {
@@ -267,37 +313,85 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   logoutText: { fontSize: 16, color: "#f5630e", fontWeight: "600" },
+
   header: {
     fontSize: 26,
     fontWeight: "600",
     color: "#313131",
     marginTop: 15,
-    marginBottom: 30,
+    marginBottom: 20,
     textAlign: "center",
   },
-  perksContainer: { paddingHorizontal: 20, paddingBottom: 60 },
-  perkCard: {
+
+  rewardsContainer: {
+    paddingHorizontal: 10,
+    paddingBottom: 60,
+  },
+  card: {
     backgroundColor: "#fff",
     borderRadius: 14,
-    padding: 16,
-    marginBottom: 16,
+    margin: 8,
+    flex: 1,
+    elevation: 4,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
   },
-  perkTitle: {
-    fontSize: 18,
+  image: {
+    height: 120,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    width: "100%",
+  },
+  cardContent: { padding: 12 },
+  cardTitle: {
+    fontSize: 16,
     fontWeight: "700",
     color: "#f5630e",
-    marginBottom: 10,
+    marginBottom: 4,
   },
-  perkItem: {
-    flexDirection: "row",
+  cardDesc: { fontSize: 13, color: "#555", marginBottom: 6 },
+  points: { fontSize: 13, fontWeight: "600", color: "#333" },
+  redeemButton: {
+    backgroundColor: "#f5630e",
+    borderRadius: 10,
+    paddingVertical: 8,
+    marginTop: 8,
+  },
+  redeemText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "600",
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 6,
-    gap: 8,
   },
-  perkText: { fontSize: 15, color: "#333", flexShrink: 1 },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    width: width * 0.8,
+    alignItems: "center",
+  },
+  modalTitle: { fontSize: 20, fontWeight: "700", color: "#f5630e" },
+  voucherCode: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginTop: 8,
+    textAlign: "center",
+  },
+  closeButton: {
+    backgroundColor: "#f5630e",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 40,
+    marginTop: 20,
+  },
+  closeText: { color: "#fff", fontWeight: "600", fontSize: 16 },
 });
