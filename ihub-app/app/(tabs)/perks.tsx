@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -8,27 +8,14 @@ import {
   Animated,
   Dimensions,
   Alert,
-  ActivityIndicator,
-  RefreshControl,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { fetchTransactions } from "@/utils/supabaseQueries";
 import * as SecureStore from "expo-secure-store";
 
 const { width, height } = Dimensions.get("window");
-
-type TransactionType = "earn" | "redeem";
-
-type Transaction = {
-  id: string;
-  description: string;
-  created_at: string;
-  points: string;
-  transactionType: TransactionType;
-};
 
 export default function PerksScreen() {
   const router = useRouter();
@@ -36,9 +23,6 @@ export default function PerksScreen() {
   const id = Array.isArray(userId) ? userId[0] : userId ?? "";
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const slideAnim = useRef(new Animated.Value(-width * 0.7)).current;
 
   // === SIDEBAR TOGGLE ===
@@ -51,6 +35,7 @@ export default function PerksScreen() {
     setMenuOpen(!menuOpen);
   };
 
+  // === LOGOUT HANDLER ===
   const handleLogout = async () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
@@ -59,11 +44,7 @@ export default function PerksScreen() {
         style: "destructive",
         onPress: async () => {
           try {
-            // Delete stored user data
             await SecureStore.deleteItemAsync("user");
-            console.log("User data cleared from SecureStore");
-
-            // Then redirect to login
             router.replace("/authenticate");
           } catch (error) {
             console.error("Error clearing SecureStore:", error);
@@ -73,81 +54,52 @@ export default function PerksScreen() {
     ]);
   };
 
-  const loadTransactions = async (showLoader = true) => {
-    try {
-      if (showLoader) setLoading(true);
-      if (!id) throw new Error("User not logged in");
+  // === PERKS DATA ===
+  const perksData = [
+    {
+      title: "🎯 General Benefits",
+      perks: [
+        "Earn 20 points per visit/order at iEat / iDrink",
+        "5% birthday discount",
+        "Redeem points starting at 300 points",
+        "50 points per referral",
+        "Free virtual membership card (QR-based)",
+      ],
+    },
+    {
+      title: "🍽️ iEAT — Good Food, Better Days",
+      perks: [
+        "Earn 20 points per ₱200 spent",
+        "Free coffee or iced tea on 5th visit",
+        "5% birthday discount",
+      ],
+    },
+    {
+      title: "☕ iDRINK — Sip, Chill, and Stay",
+      perks: [
+        "Buy 5 drinks, get 1 free",
+        "Free water refill access",
+        "Free upgrade to large every 10 drinks",
+      ],
+    },
+    {
+      title: "💻 iWORK — Your Office Away from Office",
+      perks: ["Free 1-hour iWork access upon sign-up", "Wi-Fi up to 50 Mbps"],
+    },
+    {
+      title: "🎯 iPLAY — Fun Never Clocks Out",
+      perks: ["10% off darts & billiards", "Access to member game nights"],
+    },
+    {
+      title: "☁️ iLOUNGE — Your Everyday Comfort Spot",
+      perks: ["Free lounge access with any order", "Member Wi-Fi zone"],
+    },
+    {
+      title: "🎉 EVENT / VENUE — Celebrate Your Now",
+      perks: ["5% off venue rental once per year"],
+    },
+  ];
 
-      const result = await fetchTransactions(id);
-      if (!result.success) throw new Error(result.error);
-      setTransactions(result.data ?? []);
-    } catch (err: any) {
-      console.error(err);
-      Alert.alert("Error", err.message || "Failed to load transactions.");
-    } finally {
-      if (showLoader) setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadTransactions();
-  }, []);
-
-  const onRefresh = async () => {
-    try {
-      setRefreshing(true);
-      await loadTransactions(false);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const renderItem = ({ item }: { item: Transaction }) => (
-    <View style={styles.transactionCard}>
-      <View style={styles.cardLeft}>
-        <Ionicons
-          name={item.transactionType === "earn" ? "add-circle" : "gift-outline"}
-          size={28}
-          color={item.transactionType === "earn" ? "#4CAF50" : "#f5630e"}
-        />
-      </View>
-
-      <View style={styles.cardMiddle}>
-        <Text style={styles.transactionTitle}>{item.description}</Text>
-        <Text style={styles.transactionDate}>{item.created_at}</Text>
-      </View>
-
-      <View style={styles.cardRight}>
-        <Text
-          style={[
-            styles.transactionPoints,
-            { color: item.transactionType === "earn" ? "#4CAF50" : "#f5630e" },
-          ]}
-        >
-          {item.points}
-        </Text>
-      </View>
-    </View>
-  );
-
-  // === LOADING STATE ===
-  if (loading) {
-    return (
-      <LinearGradient
-        colors={["#f5efe0ff", "#d8cbc4ff"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.fullScreenCenter}
-      >
-        <ActivityIndicator size="large" color="#f5630e" />
-        <Text style={{ color: "#333", fontSize: 18, marginTop: 10 }}>
-          Loading...
-        </Text>
-      </LinearGradient>
-    );
-  }
-
-  // === MAIN CONTENT ===
   return (
     <SafeAreaView style={styles.safeArea}>
       <LinearGradient
@@ -222,26 +174,23 @@ export default function PerksScreen() {
         {/* === HEADER === */}
         <Text style={styles.header}>List of Perks</Text>
 
-        {/* === TRANSACTIONS === */}
-        {transactions.length === 0 ? (
-          <Text style={styles.emptyText}>No transactions found.</Text>
-        ) : (
-          <FlatList
-            data={transactions}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContainer}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={["#f5630e"]}
-                tintColor="#f5630e"
-              />
-            }
-          />
-        )}
+        {/* === PERKS LIST === */}
+        <FlatList
+          data={perksData}
+          keyExtractor={(item) => item.title}
+          contentContainerStyle={styles.perksContainer}
+          renderItem={({ item }) => (
+            <View style={styles.perkCard}>
+              <Text style={styles.perkTitle}>{item.title}</Text>
+              {item.perks.map((perk, i) => (
+                <View key={i} style={styles.perkItem}>
+                  <Ionicons name="checkmark-circle" size={18} color="#f5630e" />
+                  <Text style={styles.perkText}>{perk}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        />
       </LinearGradient>
     </SafeAreaView>
   );
@@ -250,13 +199,6 @@ export default function PerksScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f5efe0ff" },
   gradientBackground: { flex: 1, width, height },
-  fullScreenCenter: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    height,
-    width,
-  },
   menuButton: {
     position: "absolute",
     top: 10,
@@ -315,47 +257,33 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "600",
     color: "#313131",
-    marginTop: 90,
+    marginTop: 15,
     marginBottom: 30,
     textAlign: "center",
   },
-  listContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 60,
-  },
-  transactionCard: {
-    flexDirection: "row",
-    alignItems: "center",
+  perksContainer: { paddingHorizontal: 20, paddingBottom: 60 },
+  perkCard: {
     backgroundColor: "#fff",
+    borderRadius: 14,
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  cardLeft: { marginRight: 16 },
-  cardMiddle: { flex: 1 },
-  cardRight: { alignItems: "flex-end" },
-  transactionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-  },
-  transactionDate: {
-    fontSize: 12,
-    color: "#888",
-  },
-  transactionPoints: {
+  perkTitle: {
     fontSize: 18,
     fontWeight: "700",
+    color: "#f5630e",
+    marginBottom: 10,
   },
-  emptyText: {
-    textAlign: "center",
-    color: "#555",
-    marginTop: 40,
-    fontSize: 16,
+  perkItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+    gap: 8,
   },
+  perkText: { fontSize: 15, color: "#333", flexShrink: 1 },
 });
