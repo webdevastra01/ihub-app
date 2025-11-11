@@ -70,7 +70,6 @@ export default function PerksScreen() {
       title: "🍽️ iEAT — Good Food, Better Days",
       perks: [
         "Earn 20 points per ₱200 spent",
-        "Free coffee or iced tea on 5th visit",
         "5% birthday discount",
       ],
     },
@@ -83,20 +82,12 @@ export default function PerksScreen() {
       ],
     },
     {
-      title: "💻 iWORK — Your Office Away from Office",
-      perks: ["Free 1-hour iWork access upon sign-up", "Wi-Fi up to 50 Mbps"],
-    },
-    {
       title: "🎯 iPLAY — Fun Never Clocks Out",
       perks: ["10% off darts & billiards", "Access to member game nights"],
     },
     {
       title: "☁️ iLOUNGE — Your Everyday Comfort Spot",
       perks: ["Free lounge access with any order", "Member Wi-Fi zone"],
-    },
-    {
-      title: "🎉 EVENT / VENUE — Celebrate Your Now",
-      perks: ["5% off venue rental once per year"],
     },
   ];
 
