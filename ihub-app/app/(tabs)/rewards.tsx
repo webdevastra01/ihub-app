@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Image,
   Modal,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,17 +18,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import QRCode from "react-native-qrcode-svg";
+import { supabase } from "@/utils/supabase";
 
 const { width, height } = Dimensions.get("window");
-
-type Reward = {
-  id: number;
-  name: string;
-  points: number;
-  voucherCode: string;
-  description: string;
-  image: string;
-};
 
 export default function RewardsScreen() {
   const router = useRouter();
@@ -35,7 +28,9 @@ export default function RewardsScreen() {
   const id = Array.isArray(userId) ? userId[0] : userId ?? "";
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
+  const [rewards, setRewards] = useState<any[]>([]);
+  const [selectedReward, setSelectedReward] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
   const slideAnim = useRef(new Animated.Value(-width * 0.7)).current;
 
   const toggleMenu = () => {
@@ -66,44 +61,50 @@ export default function RewardsScreen() {
     ]);
   };
 
-  // === REWARD DATA ===
-  const rewards = [
-    {
-      id: 1,
-      name: "Free Coffee",
-      points: 100,
-      voucherCode: "COF12345",
-      description: "Get a free cup of coffee at iDrink or iEat.",
-      image:
-        "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800",
-    },
-    {
-      id: 2,
-      name: "Movie Ticket",
-      points: 300,
-      voucherCode: "MOV99123",
-      description: "Enjoy a free movie pass for one person.",
-      image:
-        "https://images.unsplash.com/photo-1524985069026-dd778a71c7b4?w=800",
-    },
-    {
-      id: 3,
-      name: "₱200 Discount",
-      points: 250,
-      voucherCode: "DISC200",
-      description: "₱200 off on your next purchase at partner stores.",
-      image:
-        "https://images.unsplash.com/photo-1607082349566-187342175e2b?w=800",
-    },
-    {
-      id: 4,
-      name: "Free Dessert",
-      points: 150,
-      voucherCode: "SWT887",
-      description: "Free dessert with any dine-in meal.",
-      image: "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=800",
-    },
-  ];
+  // === FETCH REWARDS FROM SUPABASE ===
+  const fetchRewards = async (userId: any) => {
+    try {
+      setLoading(true);
+
+      // 1️⃣ Fetch all rewards
+      const { data: rewards, error: rewardsError } = await supabase
+        .from("rewards")
+        .select(
+          "voucherCode, name, description, neededPoints, image, unused, used, perCustomer"
+        );
+
+      if (rewardsError) throw rewardsError;
+
+      // 2️⃣ Fetch all voucherCodes the user already redeemed
+      const { data: redeemed, error: redeemedError } = await supabase
+        .from("transactions")
+        .select("voucherCode")
+        .eq("userId", userId)
+        .not("voucherCode", "is", null);
+
+      if (redeemedError) throw redeemedError;
+
+      // 3️⃣ Build a quick lookup (Set for O(1) checks)
+      const redeemedSet = new Set(redeemed.map((t) => t.voucherCode));
+
+      // 4️⃣ Merge: add a flag "alreadyRedeemed" to each reward
+      const mergedRewards = rewards.map((reward) => ({
+        ...reward,
+        alreadyRedeemed: redeemedSet.has(reward.voucherCode),
+      }));
+
+      setRewards(mergedRewards);
+    } catch (err) {
+      console.error("Error fetching rewards:", err);
+      Alert.alert("Error", "Failed to load rewards. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRewards(id);
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -114,13 +115,6 @@ export default function RewardsScreen() {
         style={styles.gradientBackground}
       >
         {/* === MENU BUTTON === */}
-        {!menuOpen && (
-          <TouchableOpacity style={styles.menuButton} onPress={toggleMenu}>
-            <Ionicons name="menu" size={30} color="#333" />
-          </TouchableOpacity>
-        )}
-
-        {/* === HAMBURGER === */}
         {!menuOpen && (
           <TouchableOpacity style={styles.menuButton} onPress={toggleMenu}>
             <Ionicons name="menu" size={30} color="#333" />
@@ -200,31 +194,50 @@ export default function RewardsScreen() {
         {/* === HEADER === */}
         <Text style={styles.header}>Rewards</Text>
 
-        {/* === REWARD CARDS === */}
-        <FlatList
-          data={rewards}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={2}
-          contentContainerStyle={styles.rewardsContainer}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Image source={{ uri: item.image }} style={styles.image} />
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{item.name}</Text>
-                <Text style={styles.cardDesc} numberOfLines={2}>
-                  {item.description}
-                </Text>
-                <Text style={styles.points}>{item.points} pts</Text>
-                <TouchableOpacity
-                  style={styles.redeemButton}
-                  onPress={() => setSelectedReward(item)}
-                >
-                  <Text style={styles.redeemText}>Redeem</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-        />
+        {/* === LOADING INDICATOR === */}
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color="#f5630e"
+            style={{ marginTop: 50 }}
+          />
+        ) : (
+          <FlatList
+            data={rewards}
+            keyExtractor={(item) => item.voucherCode}
+            numColumns={2}
+            contentContainerStyle={styles.rewardsContainer}
+            renderItem={({ item }) => {
+              const isDisabled = item.perCustomer && item.alreadyRedeemed;
+
+              return (
+                <View style={styles.card}>
+                  <Image source={{ uri: item.image }} style={styles.image} />
+                  <View style={styles.cardContent}>
+                    <Text style={styles.cardTitle}>{item.name}</Text>
+                    <Text style={styles.cardDesc} numberOfLines={2}>
+                      {item.description}
+                    </Text>
+                    <Text style={styles.points}>{item.neededPoints} pts</Text>
+
+                    <TouchableOpacity
+                      disabled={isDisabled}
+                      style={[
+                        styles.redeemButton,
+                        isDisabled && { backgroundColor: "#ccc" },
+                      ]}
+                      onPress={() => setSelectedReward(item)}
+                    >
+                      <Text style={styles.redeemText}>
+                        {isDisabled ? "Already Redeemed" : "Redeem"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            }}
+          />
+        )}
 
         {/* === REDEEM MODAL === */}
         <Modal
@@ -235,6 +248,9 @@ export default function RewardsScreen() {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
+              <Text style={styles.voucherCode}>
+                {id}
+              </Text>
               <Text style={styles.modalTitle}>{selectedReward?.name}</Text>
               <View style={{ alignItems: "center", marginVertical: 20 }}>
                 <QRCode value={selectedReward?.voucherCode || ""} size={180} />
@@ -344,7 +360,12 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 14,
     width: "100%",
   },
-  cardContent: { padding: 12 },
+  cardContent: {
+  padding: 12,
+  flex: 1,
+  justifyContent: "space-between", // evenly distributes content
+},
+
   cardTitle: {
     fontSize: 16,
     fontWeight: "700",

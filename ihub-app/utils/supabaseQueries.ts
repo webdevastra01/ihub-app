@@ -177,8 +177,6 @@ export async function fetchCustomerPoints({ userId }: { userId: string }) {
   }
 }
 
-type TransactionType = "earn" | "redeem";
-
 export async function fetchTransactions(userId: string) {
   try {
     const { data, error } = await supabase
