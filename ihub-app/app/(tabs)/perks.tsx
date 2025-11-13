@@ -57,36 +57,34 @@ export default function PerksScreen() {
   // === PERKS DATA ===
   const perksData = [
     {
-      title: "🎯 General Benefits",
+      title: "General Benefits",
       perks: [
-        "Earn 20 points per visit/order at iEat / iDrink",
-        "5% birthday discount",
-        "Redeem points starting at 300 points",
-        "50 points per referral",
-        "Free virtual membership card (QR-based)",
+        "Earn 20 iAccess points per visit.",
+        "5% birthday discount.",
+        "Redeem points starting at 300 iAccess points.",
+        "50 iAccess points per referral.",
       ],
     },
     {
-      title: "🍽️ iEAT — Good Food, Better Days",
+      title: "iEAT Zone Benefits",
       perks: [
-        "Earn 20 points per ₱200 spent",
+        "Earn 20 iAccess points per ₱500 spent",
         "5% birthday discount",
       ],
     },
     {
-      title: "☕ iDRINK — Sip, Chill, and Stay",
+      title: "iDRINK Zone Benefits",
       perks: [
-        "Buy 5 drinks, get 1 free",
+        "Buy 7 drinks, get 1 free (Milk Tea or Coffee)",
         "Free water refill access",
-        "Free upgrade to large every 10 drinks",
       ],
     },
     {
-      title: "🎯 iPLAY — Fun Never Clocks Out",
-      perks: ["10% off darts & billiards", "Access to member game nights"],
+      title: "iPLAY Zone Benefits",
+      perks: ["10% off darts & billiards"],
     },
     {
-      title: "☁️ iLOUNGE — Your Everyday Comfort Spot",
+      title: "iLOUNGE Zone Benefits",
       perks: ["Free lounge access with any order", "Member Wi-Fi zone"],
     },
   ];
