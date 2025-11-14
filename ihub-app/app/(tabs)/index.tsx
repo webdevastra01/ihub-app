@@ -335,7 +335,9 @@ export default function HomeScreen() {
 
           <View style={styles.infoContainer}>
             <Text style={styles.pointsText}>Total iAccess Points</Text>
-            <Text style={styles.pointsValue}>{totalPoints}</Text>
+            <Text style={styles.pointsValue}>
+              {Number(totalPoints).toFixed(2)}
+            </Text>
           </View>
 
           <TouchableOpacity
