@@ -124,7 +124,7 @@ export default function TransactionHistoryScreen() {
             { color: item.transactionType === "earn" ? "#4CAF50" : "#f5630e" },
           ]}
         >
-          {item.points}
+          {Number(item.points).toFixed(2)}
         </Text>
       </View>
     </View>
